@@ -42,18 +42,21 @@ docker run --rm -it \
 
 ### 2.2 Gazeboワールドおよびロボットモデルのシンボリックリンク設定
 
-コンテナ内のターミナルを開き、GazeboのFuelキャッシュディレクトリにワールドおよびロボットモデルのリンクを作成します：
+コンテナ内のターミナルを開き、Gazeboの公式モデルをダウンロードし、こちらで用意したワールドおよびロボットモデルに書き換えます：
 
 ```bash
-# 1. ワールドファイルへのリンク（大文字・小文字の両方を網羅）
-mkdir -p "/root/.gz/fuel/fuel.gazebosim.org/OpenRobotics/worlds/Panda joint control world/2" && \
-ln -sf /root/franka_project/panda_world.sdf "/root/.gz/fuel/fuel.gazebosim.org/OpenRobotics/worlds/Panda joint control world/2/panda_world.sdf"
-mkdir -p "/root/.gz/fuel/fuel.gazebosim.org/openrobotics/worlds/panda joint control world/2" && \
-ln -sf /root/franka_project/panda_world.sdf "/root/.gz/fuel/fuel.gazebosim.org/openrobotics/worlds/panda joint control world/2/panda_world.sdf"
+# ① 公式モデル（メッシュ含む一式）を先にダウンロード
+gz fuel download -u "https://fuel.ignitionrobotics.org/1.0/openrobotics/models/panda with ignition position controller model"
 
-# 2. ロボットモデルファイル (JointStatePublisher設定済み) へのリンク
-mkdir -p "/root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/panda with ignition position controller model/5" && \
-ln -sf /root/franka_project/panda_model.sdf "/root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/panda with ignition position controller model/5/model.sdf"
+# ② 改造済み panda_model.sdf で上書きコピー（実ファイルとして配置）
+cp /root/franka_project/panda_model.sdf "/root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/panda with ignition position controller model/5/model.sdf"
+
+# ③ ワールドファイル（panda_world.sdf）のコピー配置（ディレクトリ名が大文字と小文字の場合があり、両方に対応するため、２つコピーします
+mkdir -p "/root/.gz/fuel/fuel.gazebosim.org/OpenRobotics/worlds/Panda joint control world/2" && \
+cp /root/franka_project/panda_world.sdf "/root/.gz/fuel/fuel.gazebosim.org/OpenRobotics/worlds/Panda joint control world/2/panda_world.sdf"
+
+mkdir -p "/root/.gz/fuel/fuel.gazebosim.org/openrobotics/worlds/panda joint control world/2" && \
+cp /root/franka_project/panda_world.sdf "/root/.gz/fuel/fuel.gazebosim.org/openrobotics/worlds/panda joint control world/2/panda_world.sdf"
 ```
 
 ---
