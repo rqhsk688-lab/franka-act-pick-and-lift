@@ -1,0 +1,30 @@
+# Python / Virtualenv
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Windows / WSL metadata
+*:Zone.Identifier
+
+# ROS 2 build artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+ros2_ws/src/panda_control/
+
+# Past archives & test scripts
+archive_*/
+bags/
+bags_*/
+diagnose.py
+debug_policy.py
+check_sdf.py
+test_ik.py
+convert2lerobot.py
+
+# Dataset raw folder (zip is tracked)
+lerobot_dataset/
+ros2_ws/src/build/
+ros2_ws/src/install/
+ros2_ws/src/log/
