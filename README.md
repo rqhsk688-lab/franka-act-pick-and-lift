@@ -126,6 +126,7 @@ ros2 run panda_control1 pick_smooth_node
 ```
 
 ### 4.2 LeRobot形式への変換
+
 ```bash
 cd /root/franka_project
 python3 convert_to_lerobot.py
@@ -133,10 +134,6 @@ zip -r lerobot_dataset.zip lerobot_dataset
 ```
 
 ### 4.3 Google Colab での学習
-1. `lerobot_dataset.zip`, `train.py`, `requirements.txt` を Google Colab（GPU環境: T4推奨）にアップロードします。
-2. 以下のコマンドで学習を実行します：
-   ```bash
-   pip install -r requirements.txt
-   python train.py --dataset-path ./lerobot_dataset.zip --output-dir ./franka_act_policy --steps 3000
-   ```
+1. `lerobot_dataset.zip`, `train.py`を Google Colab（GPU環境: T4推奨）にアップロードします。
+2. zipファイルはgoogle driveへアップロードしてから解凍する想定ですが、このあたりは自由に変更してください
 3. 出力された `franka_act_policy` をダウンロードし、リポジトリ直下に配置して推論に使用します。
