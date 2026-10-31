@@ -1,9 +1,7 @@
-torch>=2.2.0
-torchvision
-lerobot>=0.3.0
-numpy>=1.24.0
-scipy>=1.14.0
-pyarrow>=14.0.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0+cpu
+torchvision==0.26.0+cpu
+scipy==1.18.1
+lerobot==0.6.1
 safetensors>=0.4.0
-av<16
-tqdm
+setuptools<80

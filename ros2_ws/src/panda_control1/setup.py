@@ -24,9 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'pick_demo_node=panda_control1.pick_demo_node:main',
             'act_eval_node=panda_control1.act_eval_node:main',
-            'pick_demo2_node=panda_control1.pick_demo2_node:main',
             'pick_smooth_node=panda_control1.pick_smooth_node:main'
         ],
     },

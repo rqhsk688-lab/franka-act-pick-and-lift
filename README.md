@@ -18,33 +18,62 @@ Hugging Face **LeRobot (Action Chunking with Transformers: ACT)** を用いて�
 
 ## 2. 環境構築
 
-### 2.1 コンテナの起動
-リポジトリをホスト側の `~/franka_project` にクローンし、Dockerコンテナを起動します：
+### 2.1 リポジトリのクローンとDockerコンテナの起動
+
 ```bash
+# 1. リポジトリのクローン
+git clone https://github.com/rqhsk688-lab/franka-act-pick-and-lift.git
+cd franka-act-pick-and-lift
+
+# 2. Dockerイメージのビルド
+docker build -t franka-act:latest -f docker/Dockerfile .
+
+# 3. コンテナの起動
 docker run --rm -it \
-  --name franka-gz-vnc \
+  --name franka-act-container \
   -p 127.0.0.1:6080:6080 \
   --shm-size=1g \
-  -v "$HOME/franka_project:/root/franka_project" \
-  franka-jazzy-gz:dev
+  -v "$(pwd):/root/franka_project" \
+  franka-act:latest
 ```
 ブラウザで `http://localhost:6080` を開き、VNCデスクトップに接続します。
 
-### 2.2 Gazeboワールドのシンボリックリンク設定
-新規コンテナでは Gazebo のキャッシュディレクトリにワールドファイルのリンクを貼る必要があります。コンテナ内のターミナルで以下を1行実行してください：
+---
+
+### 2.2 Gazeboワールドおよびロボットモデルのシンボリックリンク設定
+
+コンテナ内のターミナルを開き、GazeboのFuelキャッシュディレクトリにワールドおよびロボットモデルのリンクを作成します：
+
 ```bash
+# 1. ワールドファイルへのリンク（大文字・小文字の両方を網羅）
+mkdir -p "/root/.gz/fuel/fuel.gazebosim.org/OpenRobotics/worlds/Panda joint control world/2" && \
+ln -sf /root/franka_project/panda_world.sdf "/root/.gz/fuel/fuel.gazebosim.org/OpenRobotics/worlds/Panda joint control world/2/panda_world.sdf"
 mkdir -p "/root/.gz/fuel/fuel.gazebosim.org/openrobotics/worlds/panda joint control world/2" && \
 ln -sf /root/franka_project/panda_world.sdf "/root/.gz/fuel/fuel.gazebosim.org/openrobotics/worlds/panda joint control world/2/panda_world.sdf"
+
+# 2. ロボットモデルファイル (JointStatePublisher設定済み) へのリンク
+mkdir -p "/root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/panda with ignition position controller model/5" && \
+ln -sf /root/franka_project/panda_model.sdf "/root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/panda with ignition position controller model/5/model.sdf"
 ```
+
+---
 
 ### 2.3 Python依存ライブラリのインストール
-推論ノードの実行に必要なライブラリをコンテナ内にインストールします：
+
+推論に必要なライブラリをコンテナ内にインストールします（CPU版PyTorchおよびLeRobotが超軽量・依存衝突なしに導入されます）：
+
 ```bash
-cd /root/franka_project
-pip install -r requirements.txt
+# 1. pipのインストール（初回のみ）
+apt-get update && apt-get install -y --no-install-recommends python3-pip
+
+# 2. requirements.txt からライブラリを一括インストール
+pip install --no-cache-dir --break-system-packages --ignore-installed -r /root/franka_project/requirements.txt
 ```
 
+---
+
 ### 2.4 ROS 2 パッケージのビルド
+
 ```bash
 cd /root/franka_project/ros2_ws
 colcon build --packages-select panda_control1
@@ -55,49 +84,56 @@ source install/setup.bash
 
 ## 3. 実行手順
 
-### 3.1 Gazebo シミュレーションの起動
-コンテナ内のターミナルで Gazebo を起動します：
+推論・シミュレーションの実行には **3つのターミナル** を使用します。
+
+### ターミナル 1: Gazebo シミュレーションの起動
 ```bash
 gz sim
 ```
-画面右上の再生ボタン（▶）を押し、シミュレーションを開始します。
+※起動後、画面右上の **再生ボタン（▶）** をクリックしてシミュレーションを開始します。
 
-### 3.2 デモ動作の実行（軌道生成・データ収集）
-C1連続コサイン補間による滑らかな実演ノードを実行します：
+### ターミナル 2: ROS-Gazebo ブリッジの起動
+GazeboとROS 2間で関節状態（`/joint_states`）および制御コマンドを中継します：
 ```bash
-# 高品質デモ収集（本番用）
-ros2 run panda_control1 pick_smooth_node
-
-# ※参考: 開発過程で作成したデモノード
-# ros2 run panda_control1 pick_demo_node
-# ros2 run panda_control1 pick_demo2_node
+ros2 run ros_gz_bridge parameter_bridge \
+  --ros-args \
+  -p config_file:=/root/franka_project/panda_joint1_bridge.yaml
 ```
 
-### 3.3 ACT ポリシーによる自律推論の実行
-学習済みモデル（`franka_act_policy`）を読み込み、自律把持・持ち上げを実行します：
+### ターミナル 3: ACT ポリシーによる自律推論の実行
+学習済みモデル（`franka_act_policy`）をロードし、物体の自律把持・持ち上げを実行します：
 ```bash
+cd /root/franka_project/ros2_ws
+source install/setup.bash
 ros2 run panda_control1 act_eval_node --model-path /root/franka_project/franka_act_policy
 ```
 
 ---
 
-## 4. 学習パイプライン (Google Colab / GPU環境)
+## 4. デモ収集 & 学習パイプライン (Google Colab)
 
-学習は Google Colab（GPU: T4）で実施しました。再学習の手順は以下の通りです：
+### 4.1 高品質デモの収集
+```bash
+# ターミナル 1 (Gazebo) と ターミナル 2 (ブリッジ) が動いている状態で：
+cd /root/franka_project/ros2_ws
+source install/setup.bash
 
-1. **データ収集 & 変換**:
+# C1連続コサイン補間による滑らかな把持デモの実行
+ros2 run panda_control1 pick_smooth_node
+```
+
+### 4.2 LeRobot形式への変換
+```bash
+cd /root/franka_project
+python3 convert_to_lerobot.py
+zip -r lerobot_dataset.zip lerobot_dataset
+```
+
+### 4.3 Google Colab での学習
+1. `lerobot_dataset.zip`, `train.py`, `requirements.txt` を Google Colab（GPU環境: T4推奨）にアップロードします。
+2. 以下のコマンドで学習を実行します：
    ```bash
-   # bag記録
-   ros2 bag record -a -o bags/demo_ep1
-   # LeRobot形式に変換
-   python3 convert_to_lerobot.py
-   zip -r lerobot_dataset.zip lerobot_dataset
+   pip install -r requirements.txt
+   python train.py --dataset-path ./lerobot_dataset.zip --output-dir ./franka_act_policy --steps 3000
    ```
-2. **Google Colab での学習**:
-   - `lerobot_dataset.zip` と `train.py`, `requirements.txt` を Colab にアップロードします。
-   - 以下のコマンドで学習を実行します：
-     ```bash
-     pip install -r requirements.txt
-     python train.py --dataset-path ./lerobot_dataset.zip --output-dir ./franka_act_policy --steps 3000
-     ```
-   - 学習完了後、出力された `franka_act_policy` フォルダをダウンロードし、プロジェクト直下に配置して使用します。
+3. 出力された `franka_act_policy` をダウンロードし、リポジトリ直下に配置して推論に使用します。
